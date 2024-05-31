@@ -1,4 +1,4 @@
-class EventController {
+class ScheduleController {
     async create(req, res, next) {}
     async getOne(req, res, next) {}
 
@@ -9,4 +9,4 @@ class EventController {
     async update(req, res, next) {}
 }
 
-export const Controller = new EventController();
+export const Controller = new ScheduleController();
