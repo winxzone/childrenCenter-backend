@@ -3,10 +3,9 @@ import { Controller as userController } from "../controllers/userController.js";
 
 const router = new Router();
 
-router.post("/login", userController);
-router.post("/registration", userController);
-router.get("/auth", userController);
-router.get("/:id", userController);
-router.patch("/", userController);
+router.post("/login", userController.login);
+router.post("/registration", userController.registration);
+router.get("/auth", userController.check);
+// router.get("/:id");
 
 export { router as userRouter };

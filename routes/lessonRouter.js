@@ -3,10 +3,10 @@ import { Controller as lessonController } from "../controllers/lessonController.
 
 const router = new Router();
 
-router.post("/", lessonController);
-router.get("/", lessonController);
-router.get("/:id", lessonController);
-router.delete("/:id", lessonController);
-router.patch("/:id", lessonController);
+router.post("/", lessonController.create);
+router.get("/", lessonController.getAll);
+router.get("/:id", lessonController.getOne);
+router.delete("/:id", lessonController.delete);
+router.patch("/:id", lessonController.update);
 
 export { router as lessonRouter };
