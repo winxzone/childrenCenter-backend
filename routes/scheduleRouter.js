@@ -1,12 +1,12 @@
 import { Router } from "express";
-// import { Controller as lessonScheduleController } from "../controllers/lessonScheduleController.js";
+import { Controller as scheduleController } from "../controllers/scheduleController.js";
 
 const router = new Router();
 
-router.post("/");
-router.get("/");
-router.get("/:id");
-router.delete("/:id");
-router.patch("/:id");
+router.post("/", scheduleController.create);
+router.get("/", scheduleController.getAll);
+router.get("/:id", scheduleController.getOne);
+router.delete("/:id", scheduleController.delete);
+router.patch("/:id", scheduleController.update);
 
 export { router as scheduleRouter };

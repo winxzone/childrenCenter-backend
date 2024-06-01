@@ -4,14 +4,24 @@ import sequelize from "./db.js";
 import cors from "cors";
 import router from "./routes/index.js";
 import ErrorHandlingMiddleware from "./middleware/ErrorHandlingMiddleware.js";
+import fileUpload from "express-fileupload";
+
+import { fileURLToPath } from "url";
+import { resolve } from "path";
 
 dotenv.config();
 
 const PORT = process.env.PORT;
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = resolve(__filename, "..");
+
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(fileUpload());
+app.use("/lessonfiles", express.static(resolve(__dirname, "static", "lesson")));
+
 app.use("/api", router);
 
 // - Оброботка ошибок, последний Middleware
