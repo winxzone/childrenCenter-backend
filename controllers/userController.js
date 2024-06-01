@@ -1,4 +1,5 @@
 import ApiError from "../error/ApiError.js";
+import sequelize from "../db.js";
 
 class UserController {
     async registration(req, res) {
