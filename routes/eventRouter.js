@@ -1,12 +1,15 @@
 import { Router } from "express";
 import { Controller as eventController } from "../controllers/eventController.js";
 
+import authMiddleware from "../middleware/authMiddleware.js";
+import checkRoleMiddleware from "../middleware/checkRoleMiddleware.js";
+
 const router = new Router();
 
-router.post("/", eventController.create);
-router.get("/", eventController.getAll);
-router.get("/:id", eventController.getOne);
-router.delete("/:id", eventController.delete);
-router.patch("/:id", eventController.update);
+router.post("/", authMiddleware, checkRoleMiddleware(["admin"]), eventController.create);
+router.get("/", authMiddleware, eventController.getAll);
+router.get("/:id", authMiddleware, eventController.getOne);
+router.delete("/:id", authMiddleware, checkRoleMiddleware(["admin"]), eventController.delete);
+router.patch("/:id", authMiddleware, checkRoleMiddleware(["admin"]), eventController.update);
 
 export { router as eventRouter };
