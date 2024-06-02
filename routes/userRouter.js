@@ -8,13 +8,21 @@ const router = new Router();
 router.post("/login", userController.login);
 router.post("/registration", userController.registration);
 router.get("/auth", authMiddleware, userController.check);
-// router.patch("/", userController.changeRole);
 
 router.post(
     "/change-role",
     authMiddleware,
     checkRoleMiddleware(["admin"]),
     userController.changeRole
+);
+
+router.post("/child", authMiddleware, userController.addChild);
+router.post("/client", authMiddleware, userController.addClient);
+router.post(
+    "/employee",
+    authMiddleware,
+    checkRoleMiddleware(["admin"]),
+    userController.addEmployee
 );
 
 export { router as userRouter };
