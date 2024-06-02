@@ -2,8 +2,6 @@ import sequelize from "../db.js";
 import imageUpload from "../utils/imageUpload.js";
 import ApiError from "../error/ApiError.js";
 
-// Сделать img
-
 class LessonController {
     async create(req, res, next) {
         const { name, age_category, number_of_lessons_per_week, duration, employee_id } =
