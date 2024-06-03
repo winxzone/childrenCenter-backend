@@ -1,6 +1,5 @@
 import sequelize from "../db.js";
 
-// ---Пересмотреть логику sql запросов
 class ScheduleController {
     async create(req, res, next) {
         const { lessons_id, date, time, groups_id } = req.body;

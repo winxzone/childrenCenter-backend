@@ -2,7 +2,8 @@ import sequelize from "../db.js";
 
 class EventController {
     async create(req, res, next) {
-        const { name, date, time, employee_id } = req.body;
+        const { name, date, time } = req.body;
+        const employee_id = req.user.id;
 
         const query = `
             INSERT INTO event (name, date, time, employee_id)

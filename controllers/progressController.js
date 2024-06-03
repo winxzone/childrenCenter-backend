@@ -1,4 +1,5 @@
 import sequelize from "../db.js";
+import ApiError from "../error/ApiError.js";
 
 class ProgressController {
     async create(req, res, next) {

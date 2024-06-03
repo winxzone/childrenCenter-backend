@@ -17,7 +17,7 @@ router.post(
 );
 
 router.post("/child", authMiddleware, userController.addChild);
-router.post("/client", authMiddleware, userController.addClient);
+
 router.post(
     "/employee",
     authMiddleware,
