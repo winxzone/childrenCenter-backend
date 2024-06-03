@@ -3,7 +3,7 @@ import sequelize from "../db.js";
 class EventController {
     async create(req, res, next) {
         const { name, date, time } = req.body;
-        const employee_id = req.user.id;
+        const employee_id = req.user.extraId;
 
         const query = `
             INSERT INTO event (name, date, time, employee_id)
@@ -24,6 +24,7 @@ class EventController {
 
             res.status(201).json(result[0]);
         } catch (err) {
+            console.error(err);
             next(err);
         }
     }
@@ -82,16 +83,29 @@ class EventController {
 
     async update(req, res, next) {
         const { id } = req.params;
-        const { name, date, time, employee_id } = req.body;
-
-        const query = `
-            UPDATE event
-            SET name = :name, date = :date, time = :time, employee_id = :employee_id
-            WHERE id = :id
-            RETURNING *;
-        `;
+        const { name, date, time } = req.body;
+        const employee_id = req.user.extraId;
 
         try {
+            const [existingEvent] = await sequelize.query(
+                `SELECT id FROM event WHERE id = :id`,
+                {
+                    replacements: { id },
+                    type: sequelize.QueryTypes.SELECT,
+                }
+            );
+
+            if (!existingEvent || existingEvent.length === 0) {
+                return next(ApiError.notFound("Захід не знайдено."));
+            }
+
+            const query = `
+                UPDATE event
+                SET name = :name, date = :date, time = :time, employee_id = :employee_id
+                WHERE id = :id
+                RETURNING *;
+            `;
+
             const [result] = await sequelize.query(query, {
                 replacements: {
                     id,
