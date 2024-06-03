@@ -4,8 +4,9 @@ import ApiError from "../error/ApiError.js";
 
 class LessonController {
     async create(req, res, next) {
-        const { name, age_category, number_of_lessons_per_week, duration, employee_id } =
-            req.body;
+        const { name, age_category, number_of_lessons_per_week, duration } = req.body;
+
+        const employee_id = req.user.extraId;
 
         const { img } = req.files;
 
@@ -13,7 +14,7 @@ class LessonController {
         INSERT INTO lesson (name, age_category, number_of_lessons_per_week, duration, employee_id, img)
         VALUES (:name, :age_category, :number_of_lessons_per_week, :duration, :employee_id, :fileName)
         RETURNING *;
-        `;
+    `;
 
         try {
             if (!req.files || !req.files.img) {
@@ -102,8 +103,10 @@ class LessonController {
 
     async update(req, res, next) {
         const { id } = req.params;
-        const { name, age_category, number_of_lessons_per_week, duration, employee_id } =
-            req.body;
+        const { name, age_category, number_of_lessons_per_week, duration } = req.body;
+
+        const employee_id = req.user.extraId;
+
         const query = `
             UPDATE lesson
             SET name = :name, 

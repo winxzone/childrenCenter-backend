@@ -92,18 +92,29 @@ class UserController {
 
             let extraId = null;
 
-            const [clientResult] = await sequelize.query(
-                `SELECT id FROM client WHERE user_credential_id = :user_credential_id`,
-                {
-                    replacements: { user_credential_id: existingUser.id },
-                    type: sequelize.QueryTypes.SELECT,
-                }
-            );
+            if (existingUser.role === "user") {
+                // Якщо користувач - це user, отримати extraId з таблиці client
+                const [clientResult] = await sequelize.query(
+                    `SELECT id FROM client WHERE user_credential_id = :user_credential_id`,
+                    {
+                        replacements: { user_credential_id: existingUser.id },
+                        type: sequelize.QueryTypes.SELECT,
+                    }
+                );
 
-            console.log(clientResult);
+                extraId = clientResult.id;
+            } else if (existingUser.role === "admin" || existingUser.role === "teacher") {
+                // Якщо користувач - це адміністратор або вчитель, отримати extraId з таблиці employee
+                const [employeeResult] = await sequelize.query(
+                    `SELECT id FROM employee WHERE user_credential_id = :user_credential_id`,
+                    {
+                        replacements: { user_credential_id: existingUser.id },
+                        type: sequelize.QueryTypes.SELECT,
+                    }
+                );
 
-            extraId = clientResult.id;
-            console.log(extraId);
+                extraId = employeeResult.id;
+            }
 
             const token = generateJwt(
                 existingUser.id,
@@ -127,7 +138,6 @@ class UserController {
         }
     }
 
-    // - перепроверить все следущие методы
     async changeRole(req, res, next) {
         const { id, role } = req.body;
 
@@ -194,13 +204,12 @@ class UserController {
                 }
             );
 
-            // Возвращаем успешный результат
+            // Возвращаем  результат
             res.status(201).json({
                 message: "Дані дитини успішно збережені.",
                 child_id: result[0].id,
             });
         } catch (error) {
-            // Обрабатываем ошибку
             next(ApiError.badRequest(error.message));
         }
     }

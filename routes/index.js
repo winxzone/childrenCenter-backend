@@ -15,6 +15,6 @@ router.use("/lesson/schedule", authMiddleware, scheduleRouter);
 router.use("/lesson", lessonRouter);
 router.use("/lesson", priceRouter);
 router.use("/user", userRouter);
-router.use("/event", eventRouter);
+router.use("/event", authMiddleware, eventRouter);
 
 export default router;
