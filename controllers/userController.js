@@ -2,16 +2,20 @@ import ApiError from "../error/ApiError.js";
 import sequelize from "../db.js";
 
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
-
-const generateJwt = ({ id, email, role }) => {
-    console.log(jwt.sign({ id, email, role }, process.env.SECRET_KEY, { expiresIn: "24h" }));
-    return jwt.sign({ id, email, role }, process.env.SECRET_KEY, { expiresIn: "24h" });
-};
+import generateJwt from "../utils/generateJwt.js";
 
 class UserController {
     async registration(req, res, next) {
-        const { email, password, role } = req.body;
+        const {
+            email,
+            password,
+            role,
+            full_name,
+            phone_number,
+            address,
+            date_of_birth,
+            workplace,
+        } = req.body;
         const userRole = role || "user";
 
         if (!email || !password) {
@@ -38,9 +42,30 @@ class UserController {
                 }
             );
 
-            const userId = result[0] ? result[0].id : null;
+            const userId = result[0].id;
 
-            const token = generateJwt({ id: userId, email, role: userRole });
+            let extraId = null;
+
+            if (userRole === "user") {
+                const [clientResult] = await sequelize.query(
+                    `INSERT INTO client (user_credential_id, full_name, phone_number, address, date_of_birth, workplace) 
+                    VALUES (:user_credential_id, :full_name, :phone_number, :address, :date_of_birth, :workplace) RETURNING id`,
+                    {
+                        replacements: {
+                            user_credential_id: userId,
+                            full_name,
+                            phone_number,
+                            address,
+                            date_of_birth,
+                            workplace,
+                        },
+                        type: sequelize.QueryTypes.INSERT,
+                    }
+                );
+                extraId = clientResult[0].id;
+            }
+
+            const token = generateJwt(userId, email, userRole, extraId);
             res.status(201).json({ token, message: "Аккаунт успішно зареєстровано." });
         } catch (error) {
             next(ApiError.badRequest(error.message));
@@ -65,7 +90,27 @@ class UserController {
                 return next(ApiError.unauthorized("Не вірний пароль."));
             }
 
-            const token = generateJwt(existingUser.id, existingUser.email, existingUser.role);
+            let extraId = null;
+
+            const [clientResult] = await sequelize.query(
+                `SELECT id FROM client WHERE user_credential_id = :user_credential_id`,
+                {
+                    replacements: { user_credential_id: existingUser.id },
+                    type: sequelize.QueryTypes.SELECT,
+                }
+            );
+
+            console.log(clientResult);
+
+            extraId = clientResult.id;
+            console.log(extraId);
+
+            const token = generateJwt(
+                existingUser.id,
+                existingUser.email,
+                existingUser.role,
+                extraId
+            );
 
             res.status(200).json({ user: existingUser, token });
         } catch (error) {
@@ -75,17 +120,14 @@ class UserController {
 
     async check(req, res, next) {
         try {
-            const { id, email, role } = req.user;
-            console.log({
-                user: { id, email, role },
-                token: req.headers.authorization.split(" ")[1],
-            });
-            return res.json({ user: { id, email, role } });
+            const { id, email, role, extraId } = req.user;
+            return res.json({ user: { id, email, role, extraId } });
         } catch (error) {
             next(ApiError.unauthorized("Помилка перевірки користувача"));
         }
     }
 
+    // - перепроверить все следущие методы
     async changeRole(req, res, next) {
         const { id, role } = req.body;
 
@@ -117,20 +159,27 @@ class UserController {
         const { full_name, date_of_birth, additional_information } = req.body;
 
         try {
-            const [client] = await sequelize.query(
+            // Получаем user_id из токена
+            const userId = req.user.id;
+
+            // Ищем client_id с использованием user_id
+            const [clientResult] = await sequelize.query(
                 `SELECT id FROM client WHERE user_credential_id = :user_credential_id`,
                 {
-                    replacements: { user_credential_id: req.user.id },
+                    replacements: { user_credential_id: userId },
                     type: sequelize.QueryTypes.SELECT,
                 }
             );
 
-            if (!client) {
+            // Проверяем, был ли найден client
+            if (!clientResult) {
                 return next(ApiError.badRequest("Клієнт не знайдений."));
             }
 
-            const client_id = client.id;
+            // Извлекаем client_id
+            const clientId = clientResult.id;
 
+            // Вставляем данные о ребенке в таблицу children с указанием client_id
             const [result] = await sequelize.query(
                 `INSERT INTO children (full_name, date_of_birth, additional_information, client_id)
                  VALUES (:full_name, :date_of_birth, :additional_information, :client_id) RETURNING id`,
@@ -139,73 +188,47 @@ class UserController {
                         full_name,
                         date_of_birth,
                         additional_information,
-                        client_id,
+                        client_id: clientId,
                     },
                     type: sequelize.QueryTypes.INSERT,
                 }
             );
 
+            // Возвращаем успешный результат
             res.status(201).json({
                 message: "Дані дитини успішно збережені.",
                 child_id: result[0].id,
             });
         } catch (error) {
-            next(ApiError.badRequest(error.message));
-        }
-    }
-
-    async addClient(req, res, next) {
-        const { full_name, date_of_birth, additional_information } = req.body;
-
-        try {
-            const [client] = await sequelize.query(
-                `SELECT id FROM client WHERE user_credential_id = :user_credential_id`,
-                {
-                    replacements: { user_credential_id: req.user.id },
-                    type: sequelize.QueryTypes.SELECT,
-                }
-            );
-
-            if (!client.length) {
-                return next(ApiError.badRequest("Клієнт не знайдений."));
-            }
-
-            const client_id = client[0].id;
-
-            const [result] = await sequelize.query(
-                `INSERT INTO child (full_name, date_of_birth, additional_information, client_id)
-                 VALUES (:full_name, :date_of_birth, :additional_information, :client_id) RETURNING id`,
-                {
-                    replacements: {
-                        full_name,
-                        date_of_birth,
-                        additional_information,
-                        client_id,
-                    },
-                    type: sequelize.QueryTypes.INSERT,
-                }
-            );
-
-            res.status(201).json({
-                message: "Дані дитини успішно збережені.",
-                child_id: result[0].id,
-            });
-        } catch (error) {
+            // Обрабатываем ошибку
             next(ApiError.badRequest(error.message));
         }
     }
 
     async addEmployee(req, res, next) {
-        const { email, password, full_name, phone_number, address, birth_date, position_id } =
-            req.body;
+        const {
+            email,
+            password,
+            full_name,
+            phone_number,
+            address,
+            birth_date,
+            position_id,
+            role,
+        } = req.body;
+
+        // Проверяем, что роль соответствует ожидаемым значениям
+        if (role !== "teacher" && role !== "admin") {
+            return next(ApiError.badRequest("Роль должна быть 'teacher' или 'admin'."));
+        }
 
         try {
             const hashPassword = await bcrypt.hash(password, 5);
 
             const [userResult] = await sequelize.query(
-                `INSERT INTO user_credential (email, password, role) VALUES (:email, :password, 'employee') RETURNING id`,
+                `INSERT INTO user_credential (email, password, role) VALUES (:email, :password, :role) RETURNING id`,
                 {
-                    replacements: { email, password: hashPassword },
+                    replacements: { email, password: hashPassword, role },
                     type: sequelize.QueryTypes.INSERT,
                 }
             );
@@ -214,7 +237,7 @@ class UserController {
 
             const [employeeResult] = await sequelize.query(
                 `INSERT INTO employee (full_name, phone_number, address, birth_date, employment_date, position_id, user_credential_id)
-             VALUES (:full_name, :phone_number, :address, :birth_date, NOW(), :position_id, :user_credential_id) RETURNING id`,
+                 VALUES (:full_name, :phone_number, :address, :birth_date, NOW(), :position_id, :user_credential_id) RETURNING id`,
                 {
                     replacements: {
                         full_name,
