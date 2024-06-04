@@ -126,6 +126,57 @@ class EventController {
             next(err);
         }
     }
+
+    async registration(req, res, next) {
+        // в теории event_id должен браться из
+        const { event_id } = req.body;
+        const client_id = req.user.extraId;
+
+        try {
+            const [event] = await sequelize.query(
+                `SELECT id FROM event WHERE id = :event_id`,
+                {
+                    replacements: { event_id },
+                    type: sequelize.QueryTypes.SELECT,
+                }
+            );
+
+            if (!event || event.length === 0) {
+                return next(ApiError.notFound("Захід з таким id не знайден."));
+            }
+
+            const [client] = await sequelize.query(
+                `SELECT id FROM client WHERE id = :client_id`,
+                {
+                    replacements: { client_id },
+                    type: sequelize.QueryTypes.SELECT,
+                }
+            );
+
+            if (!client || client.length === 0) {
+                return next(ApiError.notFound("Клієнт з таким id не знайден."));
+            }
+
+            const query = `
+            INSERT INTO event_client (client_id, event_id)
+            VALUES (:client_id, :event_id)
+            RETURNING *;
+        `;
+
+            const [result] = await sequelize.query(query, {
+                replacements: {
+                    client_id,
+                    event_id,
+                },
+                type: sequelize.QueryTypes.INSERT,
+            });
+
+            res.status(201).json(result[0]);
+        } catch (error) {
+            console.error(error);
+            next(ApiError.badRequest("Помилка при реєстрації на захід."));
+        }
+    }
 }
 
 export const Controller = new EventController();

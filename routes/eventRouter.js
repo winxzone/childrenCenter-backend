@@ -12,4 +12,5 @@ router.get("/:id", authMiddleware, eventController.getOne);
 router.delete("/:id", authMiddleware, checkRoleMiddleware(["admin"]), eventController.delete);
 router.patch("/:id", authMiddleware, checkRoleMiddleware(["admin"]), eventController.update);
 
+router.post("/registration", authMiddleware, eventController.registration);
 export { router as eventRouter };
